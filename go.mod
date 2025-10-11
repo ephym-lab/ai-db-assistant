@@ -1,4 +1,4 @@
-module github.com/ephylab/ai-db-assistant
+module github.com/ephy-lab/ai-db-assistant
 
 go 1.24.7
 

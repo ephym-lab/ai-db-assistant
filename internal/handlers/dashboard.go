@@ -8,8 +8,8 @@ import (
 
 	"github.com/gorilla/mux"
 	"github.com/ephy-lab/ai-db-assistant/internal/middleware"
-	"github.com/ephylab/ai-db-assistant/internal/models"
-	"github.com/ephylab/ai-db-assistant/pkg/response"
+	"github.com/ephy-lab/ai-db-assistant/internal/models"
+	"github.com/ephy-lab/ai-db-assistant/pkg/response"
 	"gorm.io/gorm"
 )
 

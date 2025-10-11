@@ -7,7 +7,7 @@ import (
 	"time"
 
 	"github.com/ephy-lab/ai-db-assistant/internal/config"
-	"github.com/ephylab/ai-db-assistant/pkg/jwt"
+	"github.com/ephy-lab/ai-db-assistant/pkg/jwt"
 	"github.com/ephy-lab/ai-db-assistant/pkg/logger"
 	"github.com/ephy-lab/ai-db-assistant/pkg/response"
 )
