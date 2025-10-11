@@ -6,6 +6,7 @@ import (
 	"github.com/ephy-lab/ai-db-assistant/internal/handlers"
 	"github.com/ephy-lab/ai-db-assistant/internal/middleware"
 	"gorm.io/gorm"
+	"net/http"
 )
 
 func NewRouter(db *gorm.DB, cfg *config.Config) *mux.Router {

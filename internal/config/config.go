@@ -14,12 +14,12 @@ type Config struct {
 }
 
 
-func load() *Config {
+func Load() *Config {
 	return &Config{
 		Port:        getEnv("PORT", "8080"),
 		DatabaseURL: getEnv("DATABASE_URL", "postgres://user:password@localhost:5432/mydb?sslmode=disable"),
 		JWTSecret:   getEnv("JWT_SECRET", "your_jwt_secret"),
-		JWTExpiry:   getEnvAsDuration("JWT_EXPIRY", time.Hour * 24),
+		JWTExpiry:   time.Hour * 24, // 24 hours
 		Environment: getEnv("ENVIRONMENT", "development"),
 	}
 }
