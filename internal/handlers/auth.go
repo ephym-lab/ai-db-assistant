@@ -32,7 +32,11 @@ type LoginRequest struct {
 	Password string `json:"password"`
 }
 
-type AuthResponse struct {
+type AuthResponseRegister struct {
+	User  *models.User `json:"user"`
+}
+
+type AuthResponseLogin struct {
 	Token string       `json:"token"`
 	User  *models.User `json:"user"`
 }
@@ -75,15 +79,8 @@ func (h *AuthHandler) Signup(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Generate token
-	token, err := jwt.GenerateToken(user.ID, h.cfg.JWTSecret, h.cfg.JWTExpiry)
-	if err != nil {
-		response.Error(w, http.StatusInternalServerError, "Failed to generate token")
-		return
-	}
 
-	response.Success(w, http.StatusCreated, "User created successfully", AuthResponse{
-		Token: token,
+	response.Success(w, http.StatusCreated, "User created successfully", AuthResponseRegister{
 		User:  &user,
 	})
 }
@@ -120,7 +117,7 @@ func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	response.Success(w, http.StatusOK, "Login successful", AuthResponse{
+	response.Success(w, http.StatusOK, "Login successful", AuthResponseLogin{
 		Token: token,
 		User:  &user,
 	})
