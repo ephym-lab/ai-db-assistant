@@ -9,8 +9,11 @@ import (
 	"github.com/ephy-lab/ai-db-assistant/pkg/jwt"
 	"github.com/ephy-lab/ai-db-assistant/pkg/password"
 	"github.com/ephy-lab/ai-db-assistant/pkg/response"
+	"github.com/ephy-lab/ai-db-assistant/pkg/logger"
 	"gorm.io/gorm"
 )
+
+
 
 type AuthHandler struct {
 	db  *gorm.DB
@@ -42,6 +45,7 @@ type AuthResponseLogin struct {
 }
 
 func (h *AuthHandler) Signup(w http.ResponseWriter, r *http.Request) {
+	logger.Init()
 	var req SignupRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		response.Error(w, http.StatusBadRequest, "Invalid request body")
@@ -75,6 +79,7 @@ func (h *AuthHandler) Signup(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := h.db.Create(&user).Error; err != nil {
+		logger.Fatal("Failed to create user", "error", err)
 		response.Error(w, http.StatusInternalServerError, "Failed to create user")
 		return
 	}

@@ -7,7 +7,7 @@ import (
 
 type User struct {
 	ID        uint           `gorm:"primaryKey" json:"id"`
-	Name  string         `gorm:"unique;not null" json:"username"`
+	Name      string         `gorm:"unique;not null" json:"username"`
 	Email     string         `gorm:"unique;not null" json:"email"`
 	Password  string         `gorm:"not null" json:"-"`
 	CreatedAt time.Time      `json:"created_at"`
@@ -26,7 +26,7 @@ type Project struct {
 	CreatedAt        time.Time      `json:"created_at"`
 	UpdatedAt        time.Time      `json:"updated_at"`
 	DeletedAt        gorm.DeletedAt `gorm:"index" json:"-"`
-	User             User           `json:"user,omitempty"`
+	User             *User          `json:"user,omitempty"`
 	Queries          []Query        `json:"queries,omitempty"`
 	Messages         []Message      `json:"messages,omitempty"`
 }

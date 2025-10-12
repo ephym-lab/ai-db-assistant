@@ -1,3 +1,4 @@
+// internal/handlers/project.go
 package handlers
 
 import (
@@ -80,7 +81,8 @@ func (h *ProjectHandler) GetProjects(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var projects []models.Project
-	if err := h.db.Where("user_id = ?", userID).Order("created_at desc").Find(&projects).Error; err != nil {
+	// Preload User data for the list view
+	if err := h.db.Preload("User").Where("user_id = ?", userID).Order("created_at desc").Find(&projects).Error; err != nil {
 		response.Error(w, http.StatusInternalServerError, "Failed to fetch projects")
 		return
 	}
@@ -103,7 +105,8 @@ func (h *ProjectHandler) GetProject(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var project models.Project
-	if err := h.db.Where("id = ? AND user_id = ?", projectID, userID).First(&project).Error; err != nil {
+	// Preload User data for single project view
+	if err := h.db.Preload("User").Where("id = ? AND user_id = ?", projectID, userID).First(&project).Error; err != nil {
 		if err == gorm.ErrRecordNotFound {
 			response.Error(w, http.StatusNotFound, "Project not found")
 			return
