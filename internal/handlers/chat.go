@@ -1,3 +1,4 @@
+// internal/handlers/chat.go
 package handlers
 
 import (
@@ -8,6 +9,7 @@ import (
 	"github.com/gorilla/mux"
 	"github.com/ephy-lab/ai-db-assistant/internal/middleware"
 	"github.com/ephy-lab/ai-db-assistant/internal/models"
+	"github.com/ephy-lab/ai-db-assistant/pkg/querygen"
 	"github.com/ephy-lab/ai-db-assistant/pkg/response"
 	"gorm.io/gorm"
 )
@@ -22,6 +24,12 @@ func NewChatHandler(db *gorm.DB) *ChatHandler {
 
 type SendMessageRequest struct {
 	Content string `json:"content"`
+}
+
+type ChatMessageResponse struct {
+	UserMessage models.Message      `json:"user_message"`
+	AIMessage   models.Message      `json:"ai_message"`
+	AIResponse  querygen.AIResponse `json:"ai_response"`
 }
 
 func (h *ChatHandler) SendMessage(w http.ResponseWriter, r *http.Request) {
@@ -72,15 +80,17 @@ func (h *ChatHandler) SendMessage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// TODO: Here you would integrate with OpenAI API to get AI response
-	// For now, we'll return a placeholder response
-	aiResponse := "This is a placeholder response. OpenAI integration will be added in the future."
+	// Generate AI response using the query generator
+	aiResp := querygen.GenerateResponse(req.Content, project.DatabaseType)
+
+	// Store the full AI response as JSON in the message content
+	aiContentJSON, _ := json.Marshal(aiResp)
 
 	// Save AI message
 	aiMessage := models.Message{
 		ProjectID: uint(projectID),
 		Role:      "assistant",
-		Content:   aiResponse,
+		Content:   string(aiContentJSON),
 	}
 
 	if err := h.db.Create(&aiMessage).Error; err != nil {
@@ -88,9 +98,21 @@ func (h *ChatHandler) SendMessage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	response.Success(w, http.StatusOK, "Message sent successfully", map[string]interface{}{
-		"user_message": userMessage,
-		"ai_message":   aiMessage,
+	// If query was generated, log it to queries table
+	if aiResp.Query != nil {
+		query := models.Query{
+			ProjectID: uint(projectID),
+			Query:     *aiResp.Query,
+			Status:    "pending",
+			Result:    "Query generated but not executed yet",
+		}
+		h.db.Create(&query)
+	}
+
+	response.Success(w, http.StatusOK, "Message sent successfully", ChatMessageResponse{
+		UserMessage: userMessage,
+		AIMessage:   aiMessage,
+		AIResponse:  aiResp,
 	})
 }
 
@@ -126,5 +148,40 @@ func (h *ChatHandler) GetChatHistory(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	response.JSON(w, http.StatusOK, messages)
+	// Parse AI responses to include structured data
+	type MessageWithParsedContent struct {
+		ID         uint                 `json:"id"`
+		ProjectID  uint                 `json:"project_id"`
+		Role       string               `json:"role"`
+		Content    string               `json:"content,omitempty"`
+		AIResponse *querygen.AIResponse `json:"ai_response,omitempty"`
+		CreatedAt  string               `json:"created_at"`
+	}
+
+	var parsedMessages []MessageWithParsedContent
+	for _, msg := range messages {
+		parsed := MessageWithParsedContent{
+			ID:        msg.ID,
+			ProjectID: msg.ProjectID,
+			Role:      msg.Role,
+			CreatedAt: msg.CreatedAt.Format("2006-01-02T15:04:05Z07:00"),
+		}
+
+		if msg.Role == "user" {
+			parsed.Content = msg.Content
+		} else {
+			// Try to parse AI response JSON
+			var aiResp querygen.AIResponse
+			if err := json.Unmarshal([]byte(msg.Content), &aiResp); err == nil {
+				parsed.AIResponse = &aiResp
+			} else {
+				// Fallback for old format or plain text
+				parsed.Content = msg.Content
+			}
+		}
+
+		parsedMessages = append(parsedMessages, parsed)
+	}
+
+	response.JSON(w, http.StatusOK, parsedMessages)
 }
