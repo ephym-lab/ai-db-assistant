@@ -6,21 +6,23 @@ import (
 )
 
 type Config struct {
-	Port 		  string
+	Port          string
 	DatabaseURL   string
 	JWTSecret     string
 	JWTExpiry     time.Duration
 	Environment   string
+	ProxyServerURL string
 }
 
 
 func Load() *Config {
 	return &Config{
-		Port:        getEnv("PORT", "8080"),
-		DatabaseURL: getEnv("DATABASE_URL", "postgres://user:password@localhost:5432/mydb?sslmode=disable"),
-		JWTSecret:   getEnv("JWT_SECRET", "your_jwt_secret"),
-		JWTExpiry:   time.Hour * 24, // 24 hours
-		Environment: getEnv("ENVIRONMENT", "development"),
+		Port:           getEnv("PORT", "8080"),
+		DatabaseURL:    getEnv("DATABASE_URL", "postgresql://neondb_owner:npg_GQAxtdw0BK2i@ep-round-recipe-aexn2xjv-pooler.c-2.us-east-2.aws.neon.tech/neondb?sslmode=require&channel_binding=require"),
+		JWTSecret:      getEnv("JWT_SECRET", "your_jwt_secret"),
+		JWTExpiry:      time.Hour * 24, // 24 hours
+		Environment:    getEnv("ENVIRONMENT", "development"),
+		ProxyServerURL: getEnv("PROXY_SERVER_URL", "http://localhost:8000"),
 	}
 }
 

@@ -33,6 +33,7 @@ func RunMigrations(db *gorm.DB) error {
 	return db.AutoMigrate(
 		&models.User{},
 		&models.Project{},
+		&models.Permission{},
 		&models.Query{},
 		&models.Message{},
 	)

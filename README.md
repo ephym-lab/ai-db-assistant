@@ -6,6 +6,7 @@ A modular, scalable Go backend for an AI-powered database assistant platform tha
 
 - **User Authentication**: JWT-based authentication with secure password hashing
 - **Project Management**: Create, read, update, and delete database projects (PostgreSQL & MySQL)
+- **Project Permissions**: Fine-grained access control with DDL, Write, Read, and Delete permissions per project
 - **Dashboard Analytics**: View project statistics, query history, and database metadata
 - **Chat Interface**: Project-specific chat history (AI integration ready)
 - **Secure**: Password hashing with bcrypt, JWT tokens, user authorization
@@ -70,7 +71,7 @@ ai-db-assistant/
 ### 1. Clone the repository
 
 ```bash
-git clone https://github.com/yourusername/ai-db-assistant.git
+git clone https://github.com/ephym-lab/ai-db-assistant.git
 cd ai-db-assistant
 ```
 
@@ -193,6 +194,19 @@ curl -X POST http://localhost:8080/api/projects \
   }'
 ```
 
+### Update Project Permissions
+
+```bash
+curl -X PUT http://localhost:8080/api/projects/1 \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN" \
+  -d '{
+    "allow_ddl": false,
+    "allow_write": false,
+    "allow_delete": false
+  }'
+```
+
 ### Get All Projects
 
 ```bash
@@ -245,6 +259,16 @@ make clean
 - `description`
 - `database_type` (mysql/postgresql)
 - `connection_string`
+- `created_at`
+- `updated_at`
+
+### Permissions Table
+- `id` (Primary Key)
+- `project_id` (Foreign Key, Unique)
+- `allow_ddl` (Boolean - DDL operations)
+- `allow_write` (Boolean - INSERT, UPDATE)
+- `allow_read` (Boolean - SELECT)
+- `allow_delete` (Boolean - DELETE, TRUNCATE)
 - `created_at`
 - `updated_at`
 
