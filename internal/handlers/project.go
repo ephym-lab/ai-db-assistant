@@ -25,6 +25,7 @@ type CreateProjectRequest struct {
 	Name             string `json:"name"`
 	Description      string `json:"description"`
 	DatabaseType     string `json:"database_type"`
+	Provider         string `json:"provider"`
 	ConnectionString string `json:"connection_string"`
 	AllowDDL         *bool  `json:"allow_ddl,omitempty"`
 	AllowWrite       *bool  `json:"allow_write,omitempty"`
@@ -35,6 +36,7 @@ type CreateProjectRequest struct {
 type UpdateProjectRequest struct {
 	Name             string `json:"name"`
 	Description      string `json:"description"`
+	Provider         string `json:"provider"`
 	ConnectionString string `json:"connection_string"`
 	AllowDDL         *bool  `json:"allow_ddl,omitempty"`
 	AllowWrite       *bool  `json:"allow_write,omitempty"`

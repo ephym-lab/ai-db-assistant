@@ -109,6 +109,35 @@ type DBInfoResponse struct {
 	Connected bool   `json:"connected"`
 }
 
+// ColumnInfo represents column information in a table
+type ColumnInfo struct {
+	Name     string `json:"name"`
+	Type     string `json:"type"`
+	Nullable bool   `json:"nullable"`
+}
+
+// TableInfo represents table information with columns
+type TableInfo struct {
+	Name    string       `json:"name"`
+	Columns []ColumnInfo `json:"columns"`
+}
+
+// GetSchemaRequest represents the request to get database schema
+type GetSchemaRequest struct {
+	DBType           string `json:"db_type"`
+	ConnectionString string `json:"connection_string"`
+}
+
+// GetSchemaResponse represents the response from get-schema endpoint
+type GetSchemaResponse struct {
+	DBType     string      `json:"db_type"`
+	Database   string      `json:"database"`
+	Host       string      `json:"host"`
+	Port       int         `json:"port"`
+	TableCount int         `json:"table_count"`
+	Tables     []TableInfo `json:"tables"`
+}
+
 // ErrorResponse represents an error response from the proxy
 type ErrorResponse struct {
 	Detail string `json:"detail"`
@@ -204,6 +233,21 @@ func (c *Client) GetDBInfo() (*DBInfoResponse, error) {
 	}
 
 	return &dbInfo, nil
+}
+
+// GetSchema calls the /get-schema endpoint
+func (c *Client) GetSchema(dbType, connectionString string) (*GetSchemaResponse, error) {
+	req := GetSchemaRequest{
+		DBType:           dbType,
+		ConnectionString: connectionString,
+	}
+
+	var resp GetSchemaResponse
+	if err := c.post("/get-schema", req, &resp); err != nil {
+		return nil, err
+	}
+
+	return &resp, nil
 }
 
 // post is a helper method to make POST requests

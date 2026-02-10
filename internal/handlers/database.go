@@ -299,3 +299,39 @@ func (h *DatabaseHandler) GetDBInfo(w http.ResponseWriter, r *http.Request) {
 
 	response.JSON(w, http.StatusOK, resp)
 }
+
+// GetSchema gets the database schema with table and column information
+func (h *DatabaseHandler) GetSchema(w http.ResponseWriter, r *http.Request) {
+	userID, ok := middleware.GetUserID(r)
+	if !ok {
+		response.Error(w, http.StatusUnauthorized, "Unauthorized")
+		return
+	}
+
+	vars := mux.Vars(r)
+	projectID, err := strconv.ParseUint(vars["id"], 10, 32)
+	if err != nil {
+		response.Error(w, http.StatusBadRequest, "Invalid project ID")
+		return
+	}
+
+	// Verify project ownership
+	var project models.Project
+	if err := h.db.Where("id = ? AND user_id = ?", projectID, userID).First(&project).Error; err != nil {
+		if err == gorm.ErrRecordNotFound {
+			response.Error(w, http.StatusNotFound, "Project not found")
+			return
+		}
+		response.Error(w, http.StatusInternalServerError, "Failed to fetch project")
+		return
+	}
+
+	// Get database schema via proxy
+	resp, err := h.proxyClient.GetSchema(project.DatabaseType, project.ConnectionString)
+	if err != nil {
+		response.Error(w, http.StatusInternalServerError, "Failed to get database schema: "+err.Error())
+		return
+	}
+
+	response.JSON(w, http.StatusOK, resp)
+}

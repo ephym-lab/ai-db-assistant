@@ -636,9 +636,75 @@ http://localhost:8080
 
 ---
 
+### 18. Get Database Schema
+**Endpoint:** `GET /api/projects/{id}/get-schema`  
+**Authentication:** Required (Bearer token)  
+**Description:** Get comprehensive database schema information including all tables and columns
+
+**Success Response (200 OK):**
+```json
+{
+  "db_type": "postgresql",
+  "database": "dbname",
+  "host": "localhost",
+  "port": 5432,
+  "table_count": 2,
+  "tables": [
+    {
+      "name": "users",
+      "columns": [
+        {
+          "name": "id",
+          "type": "integer",
+          "nullable": false
+        },
+        {
+          "name": "email",
+          "type": "varchar",
+          "nullable": false
+        },
+        {
+          "name": "created_at",
+          "type": "timestamp",
+          "nullable": true
+        }
+      ]
+    },
+    {
+      "name": "orders",
+      "columns": [
+        {
+          "name": "id",
+          "type": "integer",
+          "nullable": false
+        },
+        {
+          "name": "user_id",
+          "type": "integer",
+          "nullable": false
+        },
+        {
+          "name": "total",
+          "type": "decimal",
+          "nullable": false
+        }
+      ]
+    }
+  ]
+}
+```
+
+**Error Responses:**
+- `400 Bad Request`: Invalid project ID
+- `401 Unauthorized`: Missing or invalid token
+- `404 Not Found`: Project not found
+- `500 Internal Server Error`: Failed to get database schema
+
+---
+
 ## Health Check Endpoint
 
-### 18. Health Check
+### 19. Health Check
 **Endpoint:** `GET /health`  
 **Authentication:** Not required  
 **Description:** Check if the API is running

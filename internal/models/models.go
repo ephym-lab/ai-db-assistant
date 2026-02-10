@@ -22,6 +22,7 @@ type Project struct {
 	Name             string         `gorm:"not null" json:"name"`
 	Description      string         `json:"description"`
 	DatabaseType     string         `gorm:"not null" json:"database_type"` // "mysql" or "postgresql"
+	Provider         string         `gorm:"not null;default:'local'" json:"provider"` // "render" or "supabase" or "local"
 	ConnectionString string         `gorm:"not null" json:"connection_string"`
 	CreatedAt        time.Time      `json:"created_at"`
 	UpdatedAt        time.Time      `json:"updated_at"`
