@@ -68,5 +68,5 @@ type Message struct {
 	Content   string         `gorm:"type:text;not null" json:"content"`
 	CreatedAt time.Time      `json:"created_at"`
 	DeletedAt gorm.DeletedAt `gorm:"index" json:"-"`
-	Project   Project        `json:"project,omitempty"`
+	Project   Project        `json:"-"`
 }

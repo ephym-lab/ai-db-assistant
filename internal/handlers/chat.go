@@ -92,7 +92,7 @@ func (h *ChatHandler) SendMessage(w http.ResponseWriter, r *http.Request) {
 
 	// Generate AI response using proxy client
 	// TODO: Optionally fetch and include database schema
-	proxyResp, err := h.proxyClient.GenerateSQL(req.Content, project.DatabaseType, "")
+	proxyResp, err := h.proxyClient.GenerateSQL(req.Content, project.DatabaseType, strconv.FormatUint(projectID, 10), "")
 	if err != nil {
 		// Save error message
 		aiMessage := models.Message{

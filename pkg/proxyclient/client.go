@@ -31,6 +31,7 @@ type GenerateSQLRequest struct {
 	Question string `json:"question"`
 	DBType   string `json:"db_type,omitempty"`
 	DBSchema string `json:"db_schema,omitempty"`
+	ProjectID string `json:"project_id,omitempty"`
 }
 
 // GenerateSQLResponse represents the response from SQL generation
@@ -197,11 +198,12 @@ type ErrorResponse struct {
 }
 
 // GenerateSQL calls the /generate-sql endpoint
-func (c *Client) GenerateSQL(question, dbType, dbSchema string) (*GenerateSQLResponse, error) {
+func (c *Client) GenerateSQL(question, dbType,projectID, dbSchema string) (*GenerateSQLResponse, error) {
 	req := GenerateSQLRequest{
 		Question: question,
 		DBType:   dbType,
 		DBSchema: dbSchema,
+		ProjectID: projectID,
 	}
 
 	var resp GenerateSQLResponse
