@@ -7,18 +7,24 @@ import (
 	"strconv"
 
 	"github.com/gorilla/mux"
+	"github.com/ephy-lab/ai-db-assistant/internal/config"
 	"github.com/ephy-lab/ai-db-assistant/internal/middleware"
 	"github.com/ephy-lab/ai-db-assistant/internal/models"
+	"github.com/ephy-lab/ai-db-assistant/pkg/proxyclient"
 	"github.com/ephy-lab/ai-db-assistant/pkg/response"
 	"gorm.io/gorm"
 )
 
 type ProjectHandler struct {
-	db *gorm.DB
+	db          *gorm.DB
+	proxyClient *proxyclient.Client
 }
 
-func NewProjectHandler(db *gorm.DB) *ProjectHandler {
-	return &ProjectHandler{db: db}
+func NewProjectHandler(db *gorm.DB, cfg *config.Config) *ProjectHandler {
+	return &ProjectHandler{
+		db:          db,
+		proxyClient: proxyclient.NewClient(cfg.ProxyServerURL),
+	}
 }
 
 type CreateProjectRequest struct {
@@ -305,4 +311,56 @@ func (h *ProjectHandler) GetProjectPermissions(w http.ResponseWriter, r *http.Re
 	}
 
 	response.JSON(w, http.StatusOK, permission)
+}
+
+type IngestSchemaRequest struct {
+	ClearExisting bool `json:"clear_existing"`
+}
+
+// IngestSchema ingests the database schema into Qdrant for context-aware SQL generation
+func (h *ProjectHandler) IngestSchema(w http.ResponseWriter, r *http.Request) {
+	userID, ok := middleware.GetUserID(r)
+	if !ok {
+		response.Error(w, http.StatusUnauthorized, "Unauthorized")
+		return
+	}
+
+	vars := mux.Vars(r)
+	projectID, err := strconv.ParseUint(vars["id"], 10, 32)
+	if err != nil {
+		response.Error(w, http.StatusBadRequest, "Invalid project ID")
+		return
+	}
+
+	// Verify project ownership
+	var project models.Project
+	if err := h.db.Where("id = ? AND user_id = ?", projectID, userID).First(&project).Error; err != nil {
+		if err == gorm.ErrRecordNotFound {
+			response.Error(w, http.StatusNotFound, "Project not found")
+			return
+		}
+		response.Error(w, http.StatusInternalServerError, "Failed to fetch project")
+		return
+	}
+
+	// Parse request body
+	var req IngestSchemaRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		response.Error(w, http.StatusBadRequest, "Invalid request body")
+		return
+	}
+
+	// Call proxy to ingest schema
+	resp, err := h.proxyClient.IngestSchema(
+		strconv.FormatUint(projectID, 10),
+		project.DatabaseType,
+		project.ConnectionString,
+		req.ClearExisting,
+	)
+	if err != nil {
+		response.Error(w, http.StatusInternalServerError, "Failed to ingest schema: "+err.Error())
+		return
+	}
+
+	response.JSON(w, http.StatusOK, resp)
 }

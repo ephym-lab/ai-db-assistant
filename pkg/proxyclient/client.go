@@ -138,6 +138,23 @@ type GetSchemaResponse struct {
 	Tables     []TableInfo `json:"tables"`
 }
 
+// IngestSchemaRequest represents the request to ingest database schema into Qdrant
+type IngestSchemaRequest struct {
+	ProjectID        string `json:"project_id"`
+	DBType           string `json:"db_type"`
+	ConnectionString string `json:"connection_string"`
+	ClearExisting    bool   `json:"clear_existing"`
+}
+
+// IngestSchemaResponse represents the response from ingest-schema endpoint
+type IngestSchemaResponse struct {
+	Success        bool   `json:"success"`
+	ProjectID      string `json:"project_id"`
+	TablesIngested *int   `json:"tables_ingested,omitempty"`
+	Message        string `json:"message"`
+	Error          string `json:"error,omitempty"`
+}
+
 // ErrorResponse represents an error response from the proxy
 type ErrorResponse struct {
 	Detail string `json:"detail"`
@@ -244,6 +261,23 @@ func (c *Client) GetSchema(dbType, connectionString string) (*GetSchemaResponse,
 
 	var resp GetSchemaResponse
 	if err := c.post("/get-schema", req, &resp); err != nil {
+		return nil, err
+	}
+
+	return &resp, nil
+}
+
+// IngestSchema calls the /ingest-schema endpoint
+func (c *Client) IngestSchema(projectID, dbType, connectionString string, clearExisting bool) (*IngestSchemaResponse, error) {
+	req := IngestSchemaRequest{
+		ProjectID:        projectID,
+		DBType:           dbType,
+		ConnectionString: connectionString,
+		ClearExisting:    clearExisting,
+	}
+
+	var resp IngestSchemaResponse
+	if err := c.post("/ingest-schema", req, &resp); err != nil {
 		return nil, err
 	}
 

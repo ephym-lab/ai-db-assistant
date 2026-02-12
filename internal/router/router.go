@@ -20,7 +20,7 @@ func NewRouter(db *gorm.DB, cfg *config.Config) *mux.Router {
 
 	// Initialize handlers
 	authHandler := handlers.NewAuthHandler(db, cfg)
-	projectHandler := handlers.NewProjectHandler(db)
+	projectHandler := handlers.NewProjectHandler(db, cfg)
 	chatHandler := handlers.NewChatHandler(db, cfg)
 	dashboardHandler := handlers.NewDashboardHandler(db)
 	databaseHandler := handlers.NewDatabaseHandler(db, cfg)
@@ -50,6 +50,8 @@ func NewRouter(db *gorm.DB, cfg *config.Config) *mux.Router {
 	protected.HandleFunc("/projects/{id}", projectHandler.UpdateProject).Methods("PUT", "OPTIONS")
 	protected.HandleFunc("/projects/{id}", projectHandler.DeleteProject).Methods("DELETE", "OPTIONS")
 	protected.HandleFunc("/projects/{id}/permissions", projectHandler.GetProjectPermissions).Methods("GET", "OPTIONS")
+	protected.HandleFunc("/projects/{id}/ingest-schema", projectHandler.IngestSchema).Methods("POST", "OPTIONS")
+
 
 
 	// Dashboard routes (must come before /projects/{id}/summary to avoid conflict)
