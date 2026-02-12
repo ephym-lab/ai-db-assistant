@@ -155,6 +155,42 @@ type IngestSchemaResponse struct {
 	Error          string `json:"error,omitempty"`
 }
 
+// UpdateSchemaRequest represents the request to update schema in Qdrant
+type UpdateSchemaRequest struct {
+	ProjectID        string `json:"project_id"`
+	DBType           string `json:"db_type"`
+	ConnectionString string `json:"connection_string"`
+}
+
+// QdrantSchemaRequest represents the request to get schema from Qdrant
+type QdrantSchemaRequest struct {
+	ProjectID string `json:"project_id"`
+}
+
+// QdrantSchemaResponse represents the response from get-schema-from-qdrant endpoint
+type QdrantSchemaResponse struct {
+	Success    bool        `json:"success"`
+	ProjectID  string      `json:"project_id"`
+	DBType     string      `json:"db_type,omitempty"`
+	TableCount int         `json:"table_count"`
+	Tables     []TableInfo `json:"tables"`
+	Message    string      `json:"message"`
+	Error      string      `json:"error,omitempty"`
+}
+
+// DeleteSchemaRequest represents the request to delete schema from Qdrant
+type DeleteSchemaRequest struct {
+	ProjectID string `json:"project_id"`
+}
+
+// DeleteSchemaResponse represents the response from delete-schema endpoint
+type DeleteSchemaResponse struct {
+	Success   bool   `json:"success"`
+	ProjectID string `json:"project_id"`
+	Message   string `json:"message"`
+	Error     string `json:"error,omitempty"`
+}
+
 // ErrorResponse represents an error response from the proxy
 type ErrorResponse struct {
 	Detail string `json:"detail"`
@@ -278,6 +314,50 @@ func (c *Client) IngestSchema(projectID, dbType, connectionString string, clearE
 
 	var resp IngestSchemaResponse
 	if err := c.post("/ingest-schema", req, &resp); err != nil {
+		return nil, err
+	}
+
+	return &resp, nil
+}
+
+// UpdateSchema calls the /update-schema endpoint
+func (c *Client) UpdateSchema(projectID, dbType, connectionString string) (*IngestSchemaResponse, error) {
+	req := UpdateSchemaRequest{
+		ProjectID:        projectID,
+		DBType:           dbType,
+		ConnectionString: connectionString,
+	}
+
+	var resp IngestSchemaResponse
+	if err := c.post("/update-schema", req, &resp); err != nil {
+		return nil, err
+	}
+
+	return &resp, nil
+}
+
+// GetSchemaFromQdrant calls the /get-schema-from-qdrant endpoint
+func (c *Client) GetSchemaFromQdrant(projectID string) (*QdrantSchemaResponse, error) {
+	req := QdrantSchemaRequest{
+		ProjectID: projectID,
+	}
+
+	var resp QdrantSchemaResponse
+	if err := c.post("/get-schema-from-qdrant", req, &resp); err != nil {
+		return nil, err
+	}
+
+	return &resp, nil
+}
+
+// DeleteSchema calls the /delete-schema endpoint
+func (c *Client) DeleteSchema(projectID string) (*DeleteSchemaResponse, error) {
+	req := DeleteSchemaRequest{
+		ProjectID: projectID,
+	}
+
+	var resp DeleteSchemaResponse
+	if err := c.post("/delete-schema", req, &resp); err != nil {
 		return nil, err
 	}
 

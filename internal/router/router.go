@@ -51,6 +51,9 @@ func NewRouter(db *gorm.DB, cfg *config.Config) *mux.Router {
 	protected.HandleFunc("/projects/{id}", projectHandler.DeleteProject).Methods("DELETE", "OPTIONS")
 	protected.HandleFunc("/projects/{id}/permissions", projectHandler.GetProjectPermissions).Methods("GET", "OPTIONS")
 	protected.HandleFunc("/projects/{id}/ingest-schema", projectHandler.IngestSchema).Methods("POST", "OPTIONS")
+	protected.HandleFunc("/projects/{id}/update-schema", projectHandler.UpdateSchema).Methods("POST", "OPTIONS")
+	protected.HandleFunc("/projects/{id}/get-schema-from-qdrant", projectHandler.GetSchemaFromQdrant).Methods("GET", "OPTIONS")
+	protected.HandleFunc("/projects/{id}/delete-schema", projectHandler.DeleteSchema).Methods("DELETE", "OPTIONS")
 
 
 

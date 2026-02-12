@@ -364,3 +364,115 @@ func (h *ProjectHandler) IngestSchema(w http.ResponseWriter, r *http.Request) {
 
 	response.JSON(w, http.StatusOK, resp)
 }
+
+// UpdateSchema updates the database schema in Qdrant (clears and re-ingests)
+func (h *ProjectHandler) UpdateSchema(w http.ResponseWriter, r *http.Request) {
+	userID, ok := middleware.GetUserID(r)
+	if !ok {
+		response.Error(w, http.StatusUnauthorized, "Unauthorized")
+		return
+	}
+
+	vars := mux.Vars(r)
+	projectID, err := strconv.ParseUint(vars["id"], 10, 32)
+	if err != nil {
+		response.Error(w, http.StatusBadRequest, "Invalid project ID")
+		return
+	}
+
+	// Verify project ownership
+	var project models.Project
+	if err := h.db.Where("id = ? AND user_id = ?", projectID, userID).First(&project).Error; err != nil {
+		if err == gorm.ErrRecordNotFound {
+			response.Error(w, http.StatusNotFound, "Project not found")
+			return
+		}
+		response.Error(w, http.StatusInternalServerError, "Failed to fetch project")
+		return
+	}
+
+	// Call proxy to update schema
+	resp, err := h.proxyClient.UpdateSchema(
+		strconv.FormatUint(projectID, 10),
+		project.DatabaseType,
+		project.ConnectionString,
+	)
+	if err != nil {
+		response.Error(w, http.StatusInternalServerError, "Failed to update schema: "+err.Error())
+		return
+	}
+
+	response.JSON(w, http.StatusOK, resp)
+}
+
+// GetSchemaFromQdrant retrieves the database schema from Qdrant
+func (h *ProjectHandler) GetSchemaFromQdrant(w http.ResponseWriter, r *http.Request) {
+	userID, ok := middleware.GetUserID(r)
+	if !ok {
+		response.Error(w, http.StatusUnauthorized, "Unauthorized")
+		return
+	}
+
+	vars := mux.Vars(r)
+	projectID, err := strconv.ParseUint(vars["id"], 10, 32)
+	if err != nil {
+		response.Error(w, http.StatusBadRequest, "Invalid project ID")
+		return
+	}
+
+	// Verify project ownership
+	var project models.Project
+	if err := h.db.Where("id = ? AND user_id = ?", projectID, userID).First(&project).Error; err != nil {
+		if err == gorm.ErrRecordNotFound {
+			response.Error(w, http.StatusNotFound, "Project not found")
+			return
+		}
+		response.Error(w, http.StatusInternalServerError, "Failed to fetch project")
+		return
+	}
+
+	// Call proxy to get schema from Qdrant
+	resp, err := h.proxyClient.GetSchemaFromQdrant(strconv.FormatUint(projectID, 10))
+	if err != nil {
+		response.Error(w, http.StatusInternalServerError, "Failed to get schema from Qdrant: "+err.Error())
+		return
+	}
+
+	response.JSON(w, http.StatusOK, resp)
+}
+
+// DeleteSchema deletes the database schema from Qdrant
+func (h *ProjectHandler) DeleteSchema(w http.ResponseWriter, r *http.Request) {
+	userID, ok := middleware.GetUserID(r)
+	if !ok {
+		response.Error(w, http.StatusUnauthorized, "Unauthorized")
+		return
+	}
+
+	vars := mux.Vars(r)
+	projectID, err := strconv.ParseUint(vars["id"], 10, 32)
+	if err != nil {
+		response.Error(w, http.StatusBadRequest, "Invalid project ID")
+		return
+	}
+
+	// Verify project ownership
+	var project models.Project
+	if err := h.db.Where("id = ? AND user_id = ?", projectID, userID).First(&project).Error; err != nil {
+		if err == gorm.ErrRecordNotFound {
+			response.Error(w, http.StatusNotFound, "Project not found")
+			return
+		}
+		response.Error(w, http.StatusInternalServerError, "Failed to fetch project")
+		return
+	}
+
+	// Call proxy to delete schema from Qdrant
+	resp, err := h.proxyClient.DeleteSchema(strconv.FormatUint(projectID, 10))
+	if err != nil {
+		response.Error(w, http.StatusInternalServerError, "Failed to delete schema: "+err.Error())
+		return
+	}
+
+	response.JSON(w, http.StatusOK, resp)
+}
