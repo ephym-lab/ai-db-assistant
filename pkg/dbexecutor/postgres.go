@@ -25,14 +25,22 @@ func NewPostgreSQLExecutor(config *Config) *PostgreSQLExecutor {
 
 // Connect establishes a connection to PostgreSQL
 func (p *PostgreSQLExecutor) Connect() error {
-	connStr := fmt.Sprintf(
-		"host=%s port=%d user=%s password=%s dbname=%s sslmode=require",
-		p.config.Host,
-		p.config.Port,
-		p.config.User,
-		p.config.Password,
-		p.config.Database,
-	)
+	var connStr string
+	
+	// Use raw connection string if available (preserves all query parameters like sslmode)
+	if p.config.RawConnectionString != "" {
+		connStr = p.config.RawConnectionString
+	} else {
+		// Fallback to building connection string from config
+		connStr = fmt.Sprintf(
+			"host=%s port=%d user=%s password=%s dbname=%s sslmode=require",
+			p.config.Host,
+			p.config.Port,
+			p.config.User,
+			p.config.Password,
+			p.config.Database,
+		)
+	}
 
 	db, err := sql.Open("postgres", connStr)
 	if err != nil {

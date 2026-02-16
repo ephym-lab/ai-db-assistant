@@ -84,11 +84,12 @@ func parseConnectionString(connectionString string) (*Config, error) {
 	}
 
 	return &Config{
-		Host:     host,
-		Port:     port,
-		Database: database,
-		User:     user,
-		Password: password,
+		Host:                host,
+		Port:                port,
+		Database:            database,
+		User:                user,
+		Password:            password,
+		RawConnectionString: connectionString,
 	}, nil
 }
 

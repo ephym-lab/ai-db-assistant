@@ -160,9 +160,10 @@ type DBExecutor interface {
 
 // Config represents database configuration
 type Config struct {
-	Host     string
-	Port     int
-	Database string
-	User     string
-	Password string
+	Host              string
+	Port              int
+	Database          string
+	User              string
+	Password          string
+	RawConnectionString string // Original connection string with all parameters
 }
