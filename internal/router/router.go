@@ -70,7 +70,6 @@ func NewRouter(db *gorm.DB, cfg *config.Config) *mux.Router {
 	protected.HandleFunc("/projects/{id}/disconnect-db", databaseHandler.DisconnectDB).Methods("POST", "OPTIONS")
 	protected.HandleFunc("/projects/{id}/execute-sql", databaseHandler.ExecuteSQL).Methods("POST", "OPTIONS")
 	protected.HandleFunc("/projects/{id}/validate-sql", databaseHandler.ValidateSQL).Methods("POST", "OPTIONS")
-	protected.HandleFunc("/projects/{id}/db-info", databaseHandler.GetDBInfo).Methods("GET", "OPTIONS")
 	protected.HandleFunc("/projects/{id}/get-schema", databaseHandler.GetSchema).Methods("GET", "OPTIONS")
 
 	return r

@@ -12,21 +12,19 @@ import (
 	"github.com/ephy-lab/ai-db-assistant/internal/config"
 	"github.com/ephy-lab/ai-db-assistant/internal/middleware"
 	"github.com/ephy-lab/ai-db-assistant/internal/models"
-	"github.com/ephy-lab/ai-db-assistant/pkg/proxyclient"
+	"github.com/ephy-lab/ai-db-assistant/pkg/dbexecutor"
 	"github.com/ephy-lab/ai-db-assistant/pkg/response"
 	"github.com/ephy-lab/ai-db-assistant/pkg/sqlparser"
 	"gorm.io/gorm"
 )
 
 type DatabaseHandler struct {
-	db          *gorm.DB
-	proxyClient *proxyclient.Client
+	db *gorm.DB
 }
 
 func NewDatabaseHandler(db *gorm.DB, cfg *config.Config) *DatabaseHandler {
 	return &DatabaseHandler{
-		db:          db,
-		proxyClient: proxyclient.NewClient(cfg.ProxyServerURL),
+		db: db,
 	}
 }
 
@@ -39,7 +37,9 @@ type ValidateSQLRequest struct {
 	Query string `json:"query"`
 }
 
-// ConnectDB establishes a connection to the project's database
+// ConnectDB is a stub endpoint for frontend compatibility
+// With the new architecture, we don't maintain persistent connections
+// Each query creates and closes its own connection
 func (h *DatabaseHandler) ConnectDB(w http.ResponseWriter, r *http.Request) {
 	userID, ok := middleware.GetUserID(r)
 	if !ok {
@@ -65,17 +65,24 @@ func (h *DatabaseHandler) ConnectDB(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Connect to database via proxy
-	resp, err := h.proxyClient.ConnectDB(project.DatabaseType, project.ConnectionString)
+	// Test connection by creating an executor
+	executor, err := dbexecutor.NewExecutorFromConnectionString(project.DatabaseType, project.ConnectionString)
 	if err != nil {
 		response.Error(w, http.StatusInternalServerError, "Failed to connect to database: "+err.Error())
 		return
 	}
+	defer executor.Disconnect()
 
-	response.JSON(w, http.StatusOK, resp)
+	// Return success with connection info
+	response.JSON(w, http.StatusOK, map[string]interface{}{
+		"success": true,
+		"message": "Database connection successful",
+		"db_type": project.DatabaseType,
+	})
 }
 
-// DisconnectDB closes the database connection
+// DisconnectDB is a stub endpoint for frontend compatibility
+// With connection pooling, disconnection happens automatically after each request
 func (h *DatabaseHandler) DisconnectDB(w http.ResponseWriter, r *http.Request) {
 	userID, ok := middleware.GetUserID(r)
 	if !ok {
@@ -101,14 +108,11 @@ func (h *DatabaseHandler) DisconnectDB(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Disconnect from database via proxy
-	resp, err := h.proxyClient.DisconnectDB()
-	if err != nil {
-		response.Error(w, http.StatusInternalServerError, "Failed to disconnect from database: "+err.Error())
-		return
-	}
-
-	response.JSON(w, http.StatusOK, resp)
+	// Return success - no actual disconnection needed with connection pooling
+	response.JSON(w, http.StatusOK, map[string]interface{}{
+		"success": true,
+		"message": "Database disconnected successfully",
+	})
 }
 
 // ExecuteSQL executes a SQL query with permission checks
@@ -170,9 +174,17 @@ func (h *DatabaseHandler) ExecuteSQL(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	// Execute query via proxy
+	// Create database executor
+	executor, err := dbexecutor.NewExecutorFromConnectionString(project.DatabaseType, project.ConnectionString)
+	if err != nil {
+		response.Error(w, http.StatusInternalServerError, "Failed to create database executor: "+err.Error())
+		return
+	}
+	defer executor.Disconnect()
+
+	// Execute query
 	startTime := time.Now()
-	resp, err := h.proxyClient.ExecuteSQL(req.Query, req.DryRun)
+	resp, err := executor.ExecuteQuery(req.Query, req.DryRun)
 	executionTime := time.Since(startTime).Milliseconds()
 
 	// Log query execution
@@ -193,6 +205,15 @@ func (h *DatabaseHandler) ExecuteSQL(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if !resp.Success {
+		queryLog.Status = "error"
+		queryLog.Error = resp.Error
+		h.db.Create(&queryLog)
+
+		response.Error(w, http.StatusInternalServerError, "Query execution failed: "+resp.Error)
+		return
+	}
+
 	// Update query log with results
 	queryLog.Status = "success"
 	if resp.RowCount > 0 {
@@ -200,7 +221,7 @@ func (h *DatabaseHandler) ExecuteSQL(w http.ResponseWriter, r *http.Request) {
 		resultJSON, _ := json.Marshal(resp)
 		queryLog.Result = string(resultJSON)
 	} else if resp.AffectedRows > 0 {
-		queryLog.RowsAffected = resp.AffectedRows
+		queryLog.RowsAffected = int(resp.AffectedRows)
 		queryLog.Result = fmt.Sprintf("Affected rows: %d", resp.AffectedRows)
 	} else if resp.Message != "" {
 		queryLog.Result = resp.Message
@@ -254,51 +275,30 @@ func (h *DatabaseHandler) ValidateSQL(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Validate query via proxy
-	resp, err := h.proxyClient.ValidateSQL(req.Query)
+	// Create database executor
+	executor, err := dbexecutor.NewExecutorFromConnectionString(project.DatabaseType, project.ConnectionString)
+	if err != nil {
+		response.Error(w, http.StatusInternalServerError, "Failed to create database executor: "+err.Error())
+		return
+	}
+	defer executor.Disconnect()
+
+	// Validate query using EXPLAIN (dry run)
+	resp, err := executor.ExecuteQuery(req.Query, true)
 	if err != nil {
 		response.Error(w, http.StatusInternalServerError, "Failed to validate query: "+err.Error())
 		return
 	}
 
-	response.JSON(w, http.StatusOK, resp)
-}
-
-// GetDBInfo gets database connection information
-func (h *DatabaseHandler) GetDBInfo(w http.ResponseWriter, r *http.Request) {
-	userID, ok := middleware.GetUserID(r)
-	if !ok {
-		response.Error(w, http.StatusUnauthorized, "Unauthorized")
-		return
-	}
-
-	vars := mux.Vars(r)
-	projectID, err := strconv.ParseUint(vars["id"], 10, 32)
-	if err != nil {
-		response.Error(w, http.StatusBadRequest, "Invalid project ID")
-		return
-	}
-
-	// Verify project ownership
-	var project models.Project
-	if err := h.db.Where("id = ? AND user_id = ?", projectID, userID).First(&project).Error; err != nil {
-		if err == gorm.ErrRecordNotFound {
-			response.Error(w, http.StatusNotFound, "Project not found")
-			return
-		}
-		response.Error(w, http.StatusInternalServerError, "Failed to fetch project")
-		return
-	}
-
-	// Get database info via proxy
-	resp, err := h.proxyClient.GetDBInfo()
-	if err != nil {
-		response.Error(w, http.StatusInternalServerError, "Failed to get database info: "+err.Error())
+	if !resp.Success {
+		response.Error(w, http.StatusBadRequest, "Query validation failed: "+resp.Error)
 		return
 	}
 
 	response.JSON(w, http.StatusOK, resp)
 }
+
+
 
 // GetSchema gets the database schema with table and column information
 func (h *DatabaseHandler) GetSchema(w http.ResponseWriter, r *http.Request) {
@@ -326,8 +326,16 @@ func (h *DatabaseHandler) GetSchema(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Get database schema via proxy
-	resp, err := h.proxyClient.GetSchema(project.DatabaseType, project.ConnectionString)
+	// Create database executor
+	executor, err := dbexecutor.NewExecutorFromConnectionString(project.DatabaseType, project.ConnectionString)
+	if err != nil {
+		response.Error(w, http.StatusInternalServerError, "Failed to create database executor: "+err.Error())
+		return
+	}
+	defer executor.Disconnect()
+
+	// Get database schema
+	resp, err := executor.GetSchema()
 	if err != nil {
 		response.Error(w, http.StatusInternalServerError, "Failed to get database schema: "+err.Error())
 		return
