@@ -1,4 +1,4 @@
-.PHONY: help build run test clean migrate docker-up docker-down
+.PHONY: help build run test clean migrate docker-up docker-down docker-build
 
 help: ## Show this help message
 	@echo 'Usage: make [target]'
@@ -27,12 +27,19 @@ deps: ## Download dependencies
 	@go mod download
 	@go mod tidy
 
-docker-up: ## Start PostgreSQL with Docker Compose
+docker-build: ## Build Docker image
+	@echo "Building Docker image..."
+	@docker compose build
+
+docker-up: ## Start all services with Docker Compose
 	@echo "Starting Docker containers..."
-	@docker-compose up -d
+	@docker compose up -d
 
 docker-down: ## Stop Docker containers
 	@echo "Stopping Docker containers..."
-	@docker-compose down
+	@docker compose down
 
-dev: docker-up run ## Start dev environment with Docker and run app
+docker-logs: ## Tail Docker container logs
+	@docker compose logs -f
+
+dev: docker-up ## Start dev environment with Docker

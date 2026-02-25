@@ -1,0 +1,26 @@
+# Build artifacts
+bin/
+
+# Environment files
+.env
+
+# Version control
+.git
+.gitignore
+
+# Documentation
+*.md
+
+# IDE / editor
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Docker
+Dockerfile
+docker-compose.yml
+.dockerignore
+
+# Misc
+.DS_Store
