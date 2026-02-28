@@ -1,0 +1,93 @@
+# CI/CD Pipeline: Build, Test, and Deploy to Azure VM
+# - CI job runs on every push and PR to main
+# - Deploy job runs only on push to main, after CI passes
+
+name: Deploy to Azure VM
+
+on:
+  push:
+    branches: ["main"]
+  pull_request:
+    branches: ["main"]
+
+env:
+  GO_VERSION: "1.24"
+
+jobs:
+  ci:
+    name: Build & Test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          cache: true
+
+      - name: Vet
+        run: go vet ./...
+
+      - name: Build
+        run: go build -v ./...
+
+      - name: Test
+        run: go test -v ./...
+
+  deploy:
+    name: Deploy to Azure VM
+    needs: ci
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    environment: production
+    concurrency:
+      group: production-deploy
+      cancel-in-progress: false
+    steps:
+      - name: Deploy via SSH
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.VM_HOST }}
+          username: ${{ secrets.VM_USER }}
+          key: ${{ secrets.VM_SSH_KEY }}
+          script_stop: true
+          script: |
+            set -e
+            APP_DIR="/home/${{ secrets.VM_USER }}/ai-db-assistant"
+            cd "$APP_DIR"
+
+            echo "Pulling latest changes..."
+            git pull origin main
+
+            echo "Building Docker image..."
+            docker compose build --no-cache
+
+            echo "Starting services..."
+            docker compose up -d --force-recreate
+
+            echo "Running health checks..."
+            HEALTHY=false
+            for i in $(seq 1 10); do
+              if curl -sf http://localhost:8080/health > /dev/null 2>&1; then
+                echo "Health check passed on attempt $i"
+                HEALTHY=true
+                break
+              fi
+              echo "Waiting for service... ($i/10)"
+              sleep 5
+            done
+
+            if [ "$HEALTHY" = false ]; then
+              echo "Health check failed after 10 attempts"
+              echo "Container logs:"
+              docker compose logs --tail=50
+              echo "Rolling back..."
+              docker compose down
+              exit 1
+            fi
+
+            echo "Cleaning up old images..."
+            docker image prune -f
+
+            echo "Deployment complete!"
