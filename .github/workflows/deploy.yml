@@ -51,7 +51,6 @@ jobs:
           host: ${{ secrets.VM_HOST }}
           username: ${{ secrets.VM_USER }}
           key: ${{ secrets.VM_SSH_KEY }}
-          script_stop: true
           script: |
             set -e
             APP_DIR="/home/${{ secrets.VM_USER }}/ai-db-assistant"
